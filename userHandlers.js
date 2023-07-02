@@ -16,7 +16,12 @@ const getUsers = (req, res) => {
   database
     .query(sql, sqlValues)
     .then(([users]) => {
-      res.status(200).json(users);
+      const usersWithoutPasswords = users.map((user) => {
+        const { hashedPassword, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+
+      res.status(200).json(usersWithoutPasswords);
     })
     .catch((err) => {
       console.error(err);
@@ -28,19 +33,41 @@ const getUsersById = (req, res) => {
   const userId = parseInt(req.params.id);
   const user = users.find((user) => user.id === userId);
   if (user) {
-    res.status(200).json(user);
+    const { hashedPassword, ...userWithoutPassword } = user;
+    res.status(200).json(userWithoutPassword);
   } else {
     res.status(404).json({ message: "Not Found" });
   }
 };
 
+const getUserByEmailWithPasswordAndPassToNext = (req, res, next) => {
+  const { email } = req.body;
+
+  database
+    .query("select * from users where email = ?", [email])
+    .then(([users]) => {
+      if (users[0] != null) {
+        req.user = users[0];
+
+        next();
+      } else {
+        res.sendStatus(401);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error retrieving data from database");
+    });
+};
+
 const postUser = (req, res) => {
-  const { firstname, lastname, email, city, language } = req.body;
+  const { firstname, lastname, email, city, language, hashedPassword } =
+    req.body;
 
   database
     .query(
-      "INSERT INTO users(firstname, lastname, email, city, language) VALUES (?, ?, ?, ?, ?)",
-      [firstname, lastname, email, city, language]
+      "INSERT INTO users(firstname, lastname, email, city, language, hashedPassword) VALUES (?, ?, ?, ?, ?, ?)",
+      [firstname, lastname, email, city, language, hashedPassword]
     )
     .then(([result]) => {
       res.location(`/api/users/${result.insertId}`).sendStatus(201);
@@ -53,12 +80,13 @@ const postUser = (req, res) => {
 
 const updateUser = (req, res) => {
   const id = parseInt(req.params.id);
-  const { firstname, lastname, email, city, language } = req.body;
+  const { firstname, lastname, email, city, language, hashedPassword } =
+    req.body;
 
   database
     .query(
-      "update users set title = ?, director = ?, year = ?, color = ?, duration = ? where id = ?",
-      [firstname, lastname, email, city, language, id]
+      "update users set firstname = ?, lastname = ?, email = ?, city = ?, language = ?, hashedPassword = ? where id = ?",
+      [firstname, lastname, email, city, language, hashedPassword, id]
     )
     .then(([result]) => {
       if (result.affectedRows === 0) {
@@ -94,6 +122,7 @@ const deleteUser = (req, res) => {
 module.exports = {
   getUsers,
   getUsersById,
+  getUserByEmailWithPasswordAndPassToNext,
   postUser,
   updateUser,
   deleteUser,

@@ -1,3 +1,5 @@
+const { body, validationResult } = require("express-validator");
+
 const validateMovie = [
   body("title").isLength({ max: 255 }),
   body("director").isLength({ max: 255 }),

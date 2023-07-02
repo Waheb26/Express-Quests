@@ -14,6 +14,8 @@ const welcome = (req, res) => {
   res.send("Welcome to my favourite movie list");
 };
 
+const { hashPassword } = require("./auth.js");
+
 app.use(express.json());
 
 app.get("/", welcome);
@@ -28,18 +30,9 @@ app.delete("/api/movies/:id", movieHandlers.deleteMovie);
 
 const userHandlers = require("./userHandlers");
 
-const verifyPassword = (req, res) => {
-  res.send(req.user);
-};
-
 app.get("/api/users", userHandlers.getUsers);
 app.get("/api/users/:id", userHandlers.getUsersById);
 app.post("/api/users", validateUser, userHandlers.postUser);
-app.post(
-  "/api/login",
-  userHandlers.getUserByEmailWithPasswordAndPassToNext,
-  verifyPassword
-);
 app.put("/api/users/:id", validateUser, userHandlers.updateUser);
 app.delete("/api/users/:id", userHandlers.deleteUser);
 
